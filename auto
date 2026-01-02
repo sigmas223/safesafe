@@ -1,0 +1,201 @@
+-- Updated Roblox Exploit Script - Toggle Loop Version (ON/OFF)
+-- Sequence: Teleport → Literal E Hold → Click (214,462) → 0.6s wait → Press 2 → Click (461,372)
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local positions = {
+    Vector3.new(-570.484680, 259.399536, 221.639740),
+    Vector3.new(-569.728699, 259.353241, 292.151550),
+    Vector3.new(-499.030945, 259.354797, 293.045197),
+    Vector3.new(-353.322784, 258.705383, 295.270111),
+    Vector3.new(-285.901917, 259.160828, 291.739655),
+    Vector3.new(-140.641678, 259.750885, 295.737701),
+    Vector3.new(-139.675476, 259.848328, 164.203232),
+    Vector3.new(-139.474091, 259.434204, 85.659340),
+    Vector3.new(-280.544556, 259.143005, 78.043297),
+    Vector3.new(-355.709473, 258.690277, 76.410522),
+    Vector3.new(-495.245026, 259.544952, 75.967621),
+    Vector3.new(-568.848022, 259.537323, 76.422302),
+    Vector3.new(-570.484680, 259.399536, 221.639740),
+    Vector3.new(-604.636597, 257.496521, 226.691391) -- Final position
+}
+
+-- Settings
+local LOOP_DELAY = 3.2       -- seconds between each full sequence (adjust as needed)
+local isRunning = false      -- main toggle variable
+
+-- Reconnect on respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+local function runSequence()
+    if not humanoidRootPart or not humanoidRootPart.Parent then
+        warn("Character / HRP not found!")
+        return false
+    end
+    
+    -- Teleport sequence
+    for i, pos in ipairs(positions) do
+        humanoidRootPart.CFrame = CFrame.new(pos)
+        if i < #positions then
+            task.wait(0.2)
+        end
+    end
+    
+    task.wait(0.8) -- wait for prompt
+    
+    -- Literal E hold
+    local vim = VirtualInputManager
+    
+    if pcall(function() vim:SendKeyEvent(true, Enum.KeyCode.E, false, game) end) then
+        vim:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(1.5)
+        vim:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    else
+        -- fallback
+        mouse1press()
+        task.wait(1.5)
+        mouse1release()
+    end
+    
+    task.wait(0.6)
+    
+    -- Click 1 (214, 462)
+    pcall(function()
+        vim:SendMouseButtonEvent(214, 462, 0, true, game, 1)
+        task.wait(0.05)
+        vim:SendMouseButtonEvent(214, 462, 0, false, game, 1)
+    end)
+    
+    task.wait(0.6)
+    
+    -- Press 2
+    pcall(function()
+        vim:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+        task.wait(0.1)
+        vim:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+    end)
+    
+    task.wait(0.1)
+    
+    -- Final click (461, 372)
+    pcall(function()
+        vim:SendMouseButtonEvent(461, 372, 0, true, game, 1)
+        task.wait(0.05)
+        vim:SendMouseButtonEvent(461, 372, 0, false, game, 1)
+    end)
+    
+    return true
+end
+
+-- Main loop coroutine
+local loopConnection
+local function startLoop()
+    if isRunning then return end
+    isRunning = true
+    
+    spawn(function()
+        while isRunning do
+            local success = runSequence()
+            if not success then
+                warn("Sequence failed - waiting before retry...")
+            end
+            task.wait(LOOP_DELAY)
+        end
+        print("Auto sequence stopped")
+    end)
+end
+
+local function stopLoop()
+    isRunning = false
+end
+
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.ResetOnSpawn = false
+screenGui.Parent = game:GetService("CoreGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 180)
+frame.Position = UDim2.new(0.5, -130, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(90, 90, 90)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundTransparency = 1
+title.Text = "Jason Park Auto Loop"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 22
+title.Parent = frame
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, -20, 0, 30)
+status.Position = UDim2.new(0, 10, 0, 40)
+status.BackgroundTransparency = 1
+status.Text = "Status: OFF"
+status.TextColor3 = Color3.fromRGB(255, 80, 80)
+status.Font = Enum.Font.SourceSansSemibold
+status.TextSize = 18
+status.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 220, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -110, 0.65, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+toggleButton.Text = "OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 24
+toggleButton.Parent = frame
+
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(1, -20, 0, 40)
+info.Position = UDim2.new(0, 10, 1, -50)
+info.BackgroundTransparency = 1
+info.Text = "E Hold → Click → 0.6s → 2 → Click\nLoop delay: " .. LOOP_DELAY .. "s"
+info.TextColor3 = Color3.fromRGB(180, 180, 180)
+info.TextWrapped = true
+info.Font = Enum.Font.SourceSans
+info.TextSize = 14
+info.Parent = frame
+
+-- Toggle logic
+local function updateButton()
+    if isRunning then
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        toggleButton.Text = "ON"
+        status.Text = "Status: RUNNING"
+        status.TextColor3 = Color3.fromRGB(80, 255, 80)
+    else
+        toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+        toggleButton.Text = "OFF"
+        status.Text = "Status: OFF"
+        status.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    if isRunning then
+        stopLoop()
+    else
+        startLoop()
+    end
+    updateButton()
+end)
+
+-- Initial update
+updateButton()
+
+print("Auto-loop toggle GUI loaded | Use the ON/OFF button to start/stop")
