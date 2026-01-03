@@ -1,0 +1,224 @@
+-- Roblox Exploit Script: Auto Job Completer - DRAGGABLE UI VERSION
+-- DeliverySpot uses TP → Jump → 0.3s loop
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+
+-- Settings
+local START_POS = Vector3.new(149.643433, 264.666962, -417.015228)
+local HOLD_TIME = 1.5
+local PRESS_TIME = 0.1
+local DELIVERY_INTERVAL = 0.5
+local JUMP_WAIT = 0.3
+local CYCLE_WAIT = 0.8
+
+local isRunning = false
+
+-- Character helpers
+local function getHRP()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return char.HumanoidRootPart
+    end
+    return nil
+end
+
+local function refreshCharacter()
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char, char:WaitForChild("HumanoidRootPart"), char:WaitForChild("Humanoid")
+end
+
+-- Position helpers
+local function getPosition(obj)
+    if not obj then return nil end
+    if obj:IsA("BasePart") then return obj.Position end
+    if obj.PrimaryPart then return obj.PrimaryPart.Position end
+    if obj:IsA("Model") then return obj:GetPivot().Position end
+    return nil
+end
+
+local function holdKey(keyCode, duration)
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+        task.wait(duration)
+        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    end)
+end
+
+local function pressKey(keyCode)
+    holdKey(keyCode, PRESS_TIME)
+end
+
+local function teleportTo(pos)
+    local hrp = getHRP()
+    if hrp and pos then
+        hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+    end
+end
+
+local function getJobFolder()
+    local jobs = Workspace:FindFirstChild("Jobs")
+    if jobs then
+        return jobs:FindFirstChild(player.Name)
+    end
+    return nil
+end
+
+-- Job processing
+local function processJobs()
+    local jobFolder = getJobFolder()
+    if not jobFolder then return end
+
+    -- CleanFloor
+    for _, obj in ipairs(jobFolder:GetChildren()) do
+        if obj.Name == "CleanFloor" then
+            local pos = getPosition(obj)
+            if pos then
+                teleportTo(pos)
+                task.wait(0.6)
+                holdKey(Enum.KeyCode.E, HOLD_TIME)
+            end
+        end
+    end
+
+    -- DeliverySpot (teleport → jump → 0.3s)
+    for _, obj in ipairs(jobFolder:GetChildren()) do
+        if obj.Name == "DeliverySpot" then
+            local pos = getPosition(obj)
+            if pos then
+                local attempts = 0
+                while obj.Parent and attempts < 50 do
+                    teleportTo(pos)
+                    task.wait(DELIVERY_INTERVAL)
+                    pressKey(Enum.KeyCode.Space)
+                    task.wait(JUMP_WAIT)
+                    attempts = attempts + 1
+                end
+            end
+        end
+    end
+
+    -- Pickup → Dropoff
+    local attempt = 0
+    while attempt < 60 do
+        local folder = getJobFolder()
+        if not folder then break end
+
+        local pickup = folder:FindFirstChild("Pickup")
+        local dropoff = folder:FindFirstChild("Dropoff")
+
+        if not (pickup and dropoff) then break end
+
+        local pPos = getPosition(pickup)
+        local dPos = getPosition(dropoff)
+
+        if pPos and dPos then
+            teleportTo(pPos)
+            task.wait(0.6)
+            holdKey(Enum.KeyCode.E, HOLD_TIME)
+
+            task.wait(0.4)
+            teleportTo(dPos)
+            task.wait(0.4)
+            pressKey(Enum.KeyCode.Space)
+            task.wait(JUMP_WAIT)
+        end
+
+        attempt = attempt + 1
+    end
+end
+
+-- Main loop
+task.spawn(function()
+    while true do
+        if not isRunning then
+            task.wait(1)
+            continue
+        end
+
+        teleportTo(START_POS)
+        task.wait(0.8)
+        holdKey(Enum.KeyCode.E, HOLD_TIME)
+
+        pcall(processJobs)
+
+        task.wait(CYCLE_WAIT)
+    end
+end)
+
+-- ======================= DRAGGABLE GUI =======================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoJobGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 170)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -85)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true   -- native draggable
+MainFrame.Parent = ScreenGui
+
+-- Title bar (makes dragging feel more natural)
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 36)
+TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Auto Job Completer"
+TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 20
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+-- Status
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 34)
+StatusLabel.Position = UDim2.new(0, 10, 0, 45)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: OFF"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+StatusLabel.Font = Enum.Font.SourceSansBold
+StatusLabel.TextSize = 22
+StatusLabel.Parent = MainFrame
+
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 240, 0, 50)
+ToggleButton.Position = UDim2.new(0.5, -120, 1, -65)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleButton.Text = "TURN ON"
+ToggleButton.TextColor3 = Color3.new(1,1,1)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 24
+ToggleButton.Parent = MainFrame
+
+-- Button action
+ToggleButton.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    
+    if isRunning then
+        ToggleButton.Text = "TURN OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+        StatusLabel.Text = "Status: ACTIVE"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        ToggleButton.Text = "TURN ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        StatusLabel.Text = "Status: OFF"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 90, 90)
+    end
+end)
+
+print("Draggable UI version loaded - drag using the top bar!")
