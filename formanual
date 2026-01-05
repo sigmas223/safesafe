@@ -1,0 +1,169 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TPGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local bedPosition = Vector3.new(-247.931381, 316.619690, -390.102081)
+local trainPosition = Vector3.new(31.937614, 264.611206, -299.649536)
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 110)
+frame.Position = UDim2.new(0.5, -110, 0.5, -55)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+frame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = frame
+
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Color3.fromRGB(60, 60, 65)
+frameStroke.Thickness = 2
+frameStroke.Parent = frame
+
+-- Topbar for dragging
+local topbar = Instance.new("Frame")
+topbar.Size = UDim2.new(1, 0, 0, 30)
+topbar.Position = UDim2.new(0, 0, 0, 0)
+topbar.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+topbar.Parent = frame
+
+local topbarCorner = Instance.new("UICorner")
+topbarCorner.CornerRadius = UDim.new(0, 12)
+topbarCorner.Parent = topbar
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 1, 0)
+title.BackgroundTransparency = 1
+title.Text = "Teleports"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = topbar
+
+-- Draggable functionality on topbar
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function update(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+topbar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+
+        local connection
+        connection = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                connection:Disconnect()
+            end
+        end)
+    end
+end)
+
+topbar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Set BED position command
+player.Chatted:Connect(function(message)
+    if message:lower() == ";set" then
+        local char = player.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                bedPosition = root.Position
+            end
+        end
+    end
+end)
+
+-- Teleport function
+local function teleport(pos)
+    local char = player.Character
+    if char then
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then
+            root.CFrame = CFrame.new(pos)
+        end
+    end
+end
+
+-- BED Button
+local bedButton = Instance.new("TextButton")
+bedButton.Size = UDim2.new(0, 90, 0, 35)
+bedButton.Position = UDim2.new(0, 15, 0, 35)
+bedButton.Text = "BED"
+bedButton.Parent = frame
+
+local bedCorner = Instance.new("UICorner")
+bedCorner.CornerRadius = UDim.new(0, 8)
+bedCorner.Parent = bedButton
+
+local bedStroke = Instance.new("UIStroke")
+bedStroke.Color = Color3.fromRGB(80, 80, 85)
+bedStroke.Thickness = 1
+bedStroke.Parent = bedButton
+
+bedButton.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+bedButton.TextColor3 = Color3.new(1, 1, 1)
+bedButton.TextScaled = true
+bedButton.Font = Enum.Font.Gotham
+bedButton.MouseButton1Click:Connect(function()
+    teleport(bedPosition)
+end)
+bedButton.MouseEnter:Connect(function()
+    bedButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+end)
+bedButton.MouseLeave:Connect(function()
+    bedButton.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+end)
+
+-- TRAIN Button
+local trainButton = Instance.new("TextButton")
+trainButton.Size = UDim2.new(0, 90, 0, 35)
+trainButton.Position = UDim2.new(0, 115, 0, 35)
+trainButton.Text = "TRAIN"
+trainButton.Parent = frame
+
+local trainCorner = Instance.new("UICorner")
+trainCorner.CornerRadius = UDim.new(0, 8)
+trainCorner.Parent = trainButton
+
+local trainStroke = Instance.new("UIStroke")
+trainStroke.Color = Color3.fromRGB(80, 80, 85)
+trainStroke.Thickness = 1
+trainStroke.Parent = trainButton
+
+trainButton.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+trainButton.TextColor3 = Color3.new(1, 1, 1)
+trainButton.TextScaled = true
+trainButton.Font = Enum.Font.Gotham
+trainButton.MouseButton1Click:Connect(function()
+    teleport(trainPosition)
+end)
+trainButton.MouseEnter:Connect(function()
+    trainButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+end)
+trainButton.MouseLeave:Connect(function()
+    trainButton.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+end)
